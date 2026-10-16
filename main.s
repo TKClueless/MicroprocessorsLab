@@ -1,41 +1,87 @@
-	#include <xc.inc>
+#include <xc.inc>
 	
 psect	code, abs
-main:
-	org 0x0
-	goto	setup
-	
-	org 0x100		    ; Main code starts here at address 0x100
 
-	; ******* Programme FLASH read Setup Code ****  
+main:
+    org 0x0
+    call SPI_MasterInit
+    goto setup
+    org 0x100
+    
 setup:	
 	bcf	CFGS	; point to Flash program memory  
 	bsf	EEPGD 	; access Flash program memory
-	goto	start
-	; ******* My data and where to put it in RAM *
-myTable:
-	db	'T','h','i','s',' ','i','s',' ','j','u','s','t'
-	db	' ','s','o','m','e',' ','d','a','t','a'
-	myArray EQU 0x400	; Address in RAM for data
-	counter EQU 0x10	; Address of counter variable
-	align	2		; ensure alignment of subsequent instructions 
-	; ******* Main programme *********************
+	DelayCounter	EQU 0x10
+	DelayCounter2	EQU 0x12
+	movlw 0x00
+	movwf TRISH, A	; Set portH to input
+	goto start
+	
+StartTable:
+    ;db 'H','E','L','L','O'
+    db 0x10,0x0F,0x0E,0x0D,0x0C,0x0B,0x0A,0x08,0x07
+    myTable EQU 0x400
+    TableCounter EQU 0x14
+    align 2
+    
+EndTable:
+    
+SPI_MasterInit: ;Setting clock edge to negative
+    bcf CKE2	;CKE bit in SSP2STAT
+    
+    movlw	(SSP2CON1_SSPEN_MASK)|(SSP2CON1_CKP_MASK)|(SSP2CON1_SSPM1_MASK)
+    movwf SSP2CON1, A
+    ; SDO2 output; SCK2 output
+    bcf	TRISD, PORTD_SDO2_POSN, A	; SDO2 output
+    bcf	TRISD, PORTD_SCK2_POSN, A	; SCK2 output
+    return 
+
+SPI_MasterTransmit:  ; Start transmission of data (held in W)
+	movwf 	SSP2BUF, A 	; write data to output buffer
+	call Wait_Transmit
+	return
+	
+Wait_Transmit:	; Wait for transmission to complete 
+	btfss 	PIR2, 5, A	; check interrupt flag to see if data has been sent
+	bra 	Wait_Transmit
+	bcf 	PIR2, 5, A	; clear interrupt flag
+	movlw 0xFF
+	movwf DelayCounter, A
+	movwf DelayCounter2, A
+	call Delay
+	return 
+Delay:
+    decfsz DelayCounter, A
+    bra Delay
+    call Delay2
+    return
+    ;checking if github works
+Delay2:
+    decfsz DelayCounter2, A
+    bra Delay2
+    return
+    
 start:	
-	lfsr	0, myArray	; Load FSR0 with address in RAM	
+	lfsr	0, myTable	; Load FSR0 with address in RAM	
 	movlw	low highword(myTable)	; address of data in PM
 	movwf	TBLPTRU, A	; load upper bits to TBLPTRU
 	movlw	high(myTable)	; address of data in PM
 	movwf	TBLPTRH, A	; load high byte to TBLPTRH
 	movlw	low(myTable)	; address of data in PM
 	movwf	TBLPTRL, A	; load low byte to TBLPTRL
-	movlw	22		; 22 bytes to read
-	movwf 	counter, A	; our counter register
-loop:
-        tblrd*+			; move one byte from PM to TABLAT, increment TBLPRT
-	movff	TABLAT, POSTINC0	; move read data from TABLAT to (FSR0), increment FSR0	
-	decfsz	counter, A	; count down to zero
-	bra	loop		; keep going until finished
+	movlw	EndTable - StartTable	; Updates W with the length of the table
+					; in memory
+	movwf 	TableCounter, A	; our counter register
 	
-	goto	0
-;checking if github works
-	end	main
+loop:
+        tblrd*+			    ; move one byte from PM to TABLAT, increment TBLPRT
+	movff	TABLAT, POSTINC0	; move read data from TABLAT to (FSR0), increment FSR0
+	movf TABLAT, W, A
+	call SPI_MasterTransmit
+	decfsz	TableCounter, A	    ; count down to zero
+	bra	loop		    ; keep going until finished
+	goto 0
+	
+
+	
+    end	main
