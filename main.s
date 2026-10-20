@@ -4,17 +4,18 @@ psect	code, abs
 
 main:
     org 0x0
-    call SPI_MasterInit
+    
     goto setup
     org 0x100
     
 setup:	
+	call SPI_MasterInit
 	bcf	CFGS	; point to Flash program memory  
 	bsf	EEPGD 	; access Flash program memory
 	DelayCounter	EQU 0x10
 	DelayCounter2	EQU 0x12
 	movlw 0x00
-	movwf TRISH, A	; Set portH to input
+	movwf TRISH, A	; Set portH to output
 	goto start
 	
 StartTable:
@@ -25,6 +26,7 @@ StartTable:
     align 2
     
 EndTable:
+    align 2
     
 SPI_MasterInit: ;Setting clock edge to negative
     bcf CKE2	;CKE bit in SSP2STAT
@@ -69,19 +71,20 @@ start:
 	movwf	TBLPTRH, A	; load high byte to TBLPTRH
 	movlw	low(myTable)	; address of data in PM
 	movwf	TBLPTRL, A	; load low byte to TBLPTRL
-	movlw	EndTable - StartTable	; Updates W with the length of the table
+	movlw	EQU(EndTable - StartTable)	; Updates W with the length of the table
 					; in memory
 	movwf 	TableCounter, A	; our counter register
+	goto loop
 	
 loop:
         tblrd*+			    ; move one byte from PM to TABLAT, increment TBLPRT
 	movff	TABLAT, POSTINC0	; move read data from TABLAT to (FSR0), increment FSR0
-	movf TABLAT, W, A
+	movf TABLAT, W
 	call SPI_MasterTransmit
 	decfsz	TableCounter, A	    ; count down to zero
-	bra	loop		    ; keep going until finished
-	goto 0
-	
+	bra	loop	; keep going until finished
 
 	
-    end	main
+	
+	goto 0
+	end	main
