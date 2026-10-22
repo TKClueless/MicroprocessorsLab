@@ -1,74 +1,41 @@
 	#include <xc.inc>
 
+	global delay_ms, delay_us
+	
 psect	udata_acs
-	col_num:	ds 1
-	row_num:	ds 1
-	row_col:	ds 1
-	delay_counter:	ds 1
+	cnt_us:	ds 1
+	cnt_ms: ds 1
+	cnt_l:	ds 1
+	cnt_h:	ds 1
 	
-psect	code, abs
 	
-main:
-	org	0x0
-	goto	setup
-	org	0x100		    ; Main code starts here at address 0x100
-setup:	;enables pull up resistors for port E
-	clrf	TRISH, A
-	clrf	TRISF, A
-	movlw 	0x0f
-	movwf	BSR, A
-	bsf	PADCFG1, 6, B
-	bra 	read_col
 	
-read_col:
-	movwf	TRISE, A  ;enables pins 0-3 as inputs
-	movlw	0xDD
-	movwf	LATE, A
-	movff	PORTE, col_num, A
-	movff	PORTE, PORTH
-	movlw	0x0f
-	movwf	delay_counter, A
-	call	delay
-	bra	read_row
+psect	delay_code, class = CODE
+	
+delay_ms:		    ; delay given in ms in W
+	movwf	cnt_ms, A
+lcdlp2:	movlw	250	    ; 1 ms delay
+	call	delay_x4us	
+	decfsz	cnt_ms, A
+	bra	lcdlp2
+	return
 
-delay:
-    decfsz  delay_counter, F, A
-    bra delay
+delay_x4us:
+    movwf	cnt_us, A
+    swapf	cnt_us, F, A	; swap nibbles
+    movlw	0x0f	    
+    andwf	cnt_l, W, A ; move low nibble to W
+    movwf	cnt_h, A	; then to LCD_cnt_h
+    movlw	0xf0	    
+    andwf	cnt_l, F, A ; keep high nibble in LCD_cnt_l
+    call	delay
     return
-    
-read_row:
-	movlw 0xf0
-	movwf TRISE, A
-	movwf LATE, A
-	movff PORTE, row_num, A
-	movff PORTE, PORTH
-	movlw 0x0f
-	movwf delay_counter, A
-	call  delay
-	bra decode
+
 	
-decode:		    ;decodes row and column data into 2 nibbles containing 1 bit each   
-	movf row_num, W, A
-	addwf col_num, W, A
-	movwf row_col, A
-	movlw 0xFF
-	XORWF row_col, F, A    ;XOR W with row_col, putting result back in row_col
-	movff row_col, PORTF, A
-	call delay
-;	movlw	0x88
-;	cpfsgt	row_col, A
-;	bra error_msg
-	
-;test:
-	
-	
-;error_msg:
-    
-	
-	
-	goto 0x00
-	
-	
-	
-	
+delay:			; delay routine	4 instruction loop == 250ns	    
+	movlw 	0x00		; W=0
+lcdlp1:	decf 	cnt_l, F, A	; no carry when 0x00 -> 0xff
+	subwfb 	cnt_h, F, A	; no carry when 0x00 -> 0xff
+	bc 	lcdlp1		; carry, then loop again
+	return			; carry reset so return
 	

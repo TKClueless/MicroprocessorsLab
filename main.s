@@ -1,10 +1,12 @@
 	#include <xc.inc>
-
+extrn	delay_ms, delay_us
+extrn	pop_table
+	
 psect	udata_acs
 	col_num:	ds 1
 	row_num:	ds 1
 	row_col:	ds 1
-	delay_counter:	ds 1
+	bit_cnt:	ds 1
 	
 psect	code, abs
 	
@@ -15,57 +17,58 @@ main:
 setup:	;enables pull up resistors for port E
 	clrf	TRISH, A
 	clrf	TRISF, A
-	movlw 	0x0f
+	movlw 	0x0F
 	movwf	BSR, A
 	bsf	PADCFG1, 6, B
 	bra 	read_col
 	
 read_col:
 	movwf	TRISE, A  ;enables pins 0-3 as inputs
-	movlw	0xDD
-	movwf	LATE, A
+	movlw	0x0F
+	clrf	LATE, A
 	movff	PORTE, col_num, A
 	movff	PORTE, PORTH
-	movlw	0x0f
-	movwf	delay_counter, A
-	call	delay
+	movlw	200
+	call	delay_ms
 	bra	read_row
 
-delay:
-    decfsz  delay_counter, F, A
-    bra delay
-    return
-    
 read_row:
 	movlw 0xf0
 	movwf TRISE, A
-	movwf LATE, A
+	clrf LATE, A
 	movff PORTE, row_num, A
 	movff PORTE, PORTH
-	movlw 0x0f
-	movwf delay_counter, A
-	call  delay
-	bra decode
+	movlw 200
+	call  delay_ms
+	bra combine
 	
-decode:		    ;decodes row and column data into 2 nibbles containing 1 bit each   
+combine:			;combines the readings of the column and row  
 	movf row_num, W, A
 	addwf col_num, W, A
 	movwf row_col, A
 	movlw 0xFF
 	XORWF row_col, F, A    ;XOR W with row_col, putting result back in row_col
 	movff row_col, PORTF, A
-	call delay
-;	movlw	0x88
-;	cpfsgt	row_col, A
-;	bra error_msg
+	movlw 200
+	call delay_ms
+	call test
 	
-;test:
+test:
+	movlw high(row_col) ;separate row_col into nibbles
+	call pop_table	    ;compare nibble using pop_table
+	addlw bit_cnt	    ;update pop counter
+	movlw low(row_col)
+	call pop_table
+	addlw bit_cnt
+	movlw 2
+	cpfsgt bit_cnt, A	    ;if pop count >2 return error
+	;error "Multiple buttons depressed"
 	
-	
-;error_msg:
-    
-	
-	
+decode:
+	movlw high(row_col)
+	iorwf low(row_col), W, A
+	;call ascii_table
+	 
 	goto 0x00
 	
 	
