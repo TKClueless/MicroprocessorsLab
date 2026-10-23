@@ -21,6 +21,8 @@
       <itemPath>config.s</itemPath>
       <itemPath>delay.s</itemPath>
       <itemPath>lookups.s</itemPath>
+      <itemPath>button_read.s</itemPath>
+      <itemPath>decoder.s</itemPath>
     </logicalFolder>
   </logicalFolder>
   <projectmakefile>Makefile</projectmakefile>
@@ -1162,6 +1164,8 @@
         <property key="memories.programmemory" value="true"/>
         <property key="memories.programmemory.ranges" value="0-1ffff"/>
         <property key="poweroptions.powerenable" value="false"/>
+        <property key="programmerToGoFilePath"
+                  value="C:/Users/tk623/OneDrive - Imperial College London/Microprocessors/debug/default/default_ptg"/>
         <property key="programmerToGoImageName" value="default_ptg"/>
         <property key="programoptions.donoteraseauxmem" value="false"/>
         <property key="programoptions.eraseb4program" value="true"/>

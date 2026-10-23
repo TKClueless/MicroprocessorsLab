@@ -1,6 +1,6 @@
 	#include <xc.inc>
 
-	global delay_ms, delay_us
+	global delay_ms, delay_x4us
 	
 psect	udata_acs
 	cnt_us:	ds 1
@@ -8,8 +8,7 @@ psect	udata_acs
 	cnt_l:	ds 1
 	cnt_h:	ds 1
 	
-	
-	
+		
 psect	delay_code, class = CODE
 	
 delay_ms:		    ; delay given in ms in W
@@ -30,7 +29,6 @@ delay_x4us:
     andwf	cnt_l, F, A ; keep high nibble in LCD_cnt_l
     call	delay
     return
-
 	
 delay:			; delay routine	4 instruction loop == 250ns	    
 	movlw 	0x00		; W=0
