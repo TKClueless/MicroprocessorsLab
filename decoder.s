@@ -1,5 +1,5 @@
 #include <xc.inc>
-global combine, decode
+global combine, decode_row
 extrn	row_num, col_num, row_col, bit_cnt
 extrn	pop_table
 
@@ -14,7 +14,7 @@ combine:			;combines the readings of the column and row
 	movff row_col, PORTF, A
 	bra decode
 	
-decode:
+decode_row:
 	movlw 0x30
 	movf high(row_col), W, A ;separate row_col into nibbles
 	call pop_table	    ;compare nibble using pop_table
