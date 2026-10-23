@@ -1,4 +1,6 @@
 	#include <xc.inc>
+	
+global col_num, row_num
 extrn	delay_ms, delay_x4us
 extrn	pop_table
 extrn	read_col
